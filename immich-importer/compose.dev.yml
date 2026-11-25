@@ -1,0 +1,53 @@
+# Laptop dev stack: a throwaway Immich + the importer reading a generated sample Takeout.
+#
+#   python tests/fixtures/make_takeout.py .dev/incoming      # sample export (needs pillow)
+#   docker compose -f compose.dev.yml up -d --build
+#   ./scripts/dev-bootstrap.sh                               # admin user + API key + config.yaml
+#   docker compose -f compose.dev.yml exec importer t2i status
+#
+# Everything lives under ./.dev (gitignored). `docker compose -f compose.dev.yml down -v && rm -rf .dev` resets it.
+name: t2i-dev
+
+services:
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:v3.4.2
+    environment:
+      DB_HOSTNAME: database
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_DATABASE_NAME: immich
+      REDIS_HOSTNAME: redis
+      IMMICH_MACHINE_LEARNING_ENABLED: "false"
+    volumes:
+      - ./.dev/library:/data
+    ports:
+      - "127.0.0.1:2284:2283"
+    depends_on:
+      redis:
+        condition: service_started
+      database:
+        condition: service_healthy
+    restart: unless-stopped
+
+  redis:
+    image: docker.io/valkey/valkey:9@sha256:418652cfb58ef879d4978c33553735d7147016032d5aefaa14c828e611eb9dfd
+
+  database:
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: immich
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    volumes:
+      - ./.dev/postgres:/var/lib/postgresql/data
+    shm_size: 128mb
+
+  importer:
+    build: .
+    user: "${UID:-1000}:${GID:-1000}"
+    volumes:
+      - ./.dev/importer-data:/data/importer
+      - ./.dev/staging:/data/staging
+      - ./.dev/incoming:/data/takeout-local
+    depends_on: [immich-server]

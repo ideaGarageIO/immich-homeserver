@@ -1,0 +1,4 @@
+# Copy to deploy.yaml (gitignored) and fill in your server.
+host: my-server            # hostname, IP or ~/.ssh/config alias
+user: my-user
+remote_dir: ~/immich-app   # where docker-compose.yml and .env live on the server

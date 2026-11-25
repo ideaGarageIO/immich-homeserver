@@ -1,0 +1,28 @@
+# --- private: never commit (see deployment/check-public.sh) ---
+plans/
+.private-patterns
+.env
+deployment/deploy.yaml
+deployment/docker-compose.override.yml
+importer-data/
+secrets/
+config.yaml
+state/
+
+# --- data ---
+*.zip
+library/
+postgres/
+
+# --- python ---
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# --- dev stack ---
+immich-importer/.dev/
