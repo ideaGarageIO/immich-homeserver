@@ -36,6 +36,7 @@ TERMINAL_STAGES = {Stage.DONE}
 
 class PartState(StrEnum):
     PENDING = "PENDING"
+    DOWNLOADING = "DOWNLOADING"  # transfer in progress (only one part at a time)
     DOWNLOADED = "DOWNLOADED"  # present locally and verified
     FAILED = "FAILED"
 

@@ -167,6 +167,39 @@ def test_new_parts_are_merged_while_downloading(config, tmp_path):
     assert len(p.store.get(EXPORT_ID).parts) == 2
 
 
+def test_part_shows_downloading_while_in_flight(config, tmp_path):
+    p, _, _, _ = make(config, tmp_path)
+    real_fetch = p.source.fetch
+    seen = []
+
+    def spy(part, dest):
+        # Read back what a front-end (TUI / `status`) would see mid-transfer.
+        stored = p.store.get(EXPORT_ID)
+        seen.append({n: x.state for n, x in stored.parts.items()})
+        return real_fetch(part, dest)
+
+    p.source.fetch = spy
+    p.tick()
+    assert len(seen) == 2
+    first, second = sorted(p.store.get(EXPORT_ID).parts)
+    assert seen[0] == {first: PartState.DOWNLOADING, second: PartState.PENDING}
+    assert seen[1] == {first: PartState.DOWNLOADED, second: PartState.DOWNLOADING}
+    assert all(x.state == PartState.DOWNLOADED for x in p.store.get(EXPORT_ID).parts.values())
+
+
+def test_interrupted_download_state_is_reset(config, tmp_path):
+    p, _, _, _ = make(config, tmp_path)
+    p.discover()
+    es = p.store.get(EXPORT_ID)
+    for part in es.parts.values():  # simulate: worker killed mid-transfer
+        part.state = PartState.DOWNLOADING
+    p.store.save(es)
+    p.source.fetch = lambda part, dest: (_ for _ in ()).throw(RuntimeError("network down"))
+    p.tick()
+    states = {x.state for x in p.store.get(EXPORT_ID).parts.values()}
+    assert states == {PartState.FAILED}  # retried (not skipped) and no stale DOWNLOADING left
+
+
 def test_disk_space_reserve_blocks_download(config, tmp_path):
     from takeout2immich.sources.drive import DriveSource
     from test_sources import FakeRclone

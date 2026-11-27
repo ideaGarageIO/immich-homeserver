@@ -33,6 +33,8 @@ docker compose up -d --build immich-importer
    `asset.upload`, `asset.read`, `album.create`, `album.update`, `tag.create`, `tag.asset`,
    `job.create`, `server.about` — or simply *All*.
 2. **Google Drive access for rclone:** follow [google-drive-setup.md](google-drive-setup.md).
+   The quickest route is `rclone authorize "drive"` on your laptop with rclone's built-in client —
+   no Google Cloud project needed.
 3. *(Optional)* **Home Assistant:** Profile → Security → Long-lived access tokens → Create.
 
 ## 3. Configure

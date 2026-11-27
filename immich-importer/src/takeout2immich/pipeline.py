@@ -191,6 +191,11 @@ class Pipeline:
         staging = self.config.staging.path
         min_free = self.config.staging.min_free_gb * 1024**3
         max_attempts = self.config.runtime.max_attempts
+        # A part still marked DOWNLOADING was interrupted (container stopped mid-transfer);
+        # only one worker runs at a time, so it is just pending again.
+        for part in es.parts.values():
+            if part.state == PartState.DOWNLOADING:
+                part.state = PartState.PENDING
         for part in es.sorted_parts():
             if part.state == PartState.DOWNLOADED or part.attempts >= max_attempts:
                 continue
@@ -204,6 +209,8 @@ class Pipeline:
                     )
             if es.stage == Stage.DISCOVERED:
                 self._set_stage(es, Stage.DOWNLOADING)
+            part.state = PartState.DOWNLOADING
+            self.store.save(es)  # so `status` and the TUI show which part is in flight
             try:
                 path = self.source.fetch(part, staging / es.id)
                 ok = self.source.verify(part, path)
